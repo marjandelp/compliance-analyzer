@@ -58,10 +58,6 @@ def analyzeQuestion(
 Compliance question:
 {question}"""
     
-    print(f"=== FULL CHUNK 0 FOR {topic} ===")
-    print(chunks[0])
-    print(f"=== END FULL CHUNK 0 ===")
-    
     response = client.beta.chat.completions.parse(
         model=ANALYSIS_MODEL,
         messages=[
@@ -80,7 +76,7 @@ def analyzeContract(vectorStore: FAISS | None, fullText: str = "") -> AnalysisRe
 
     with ThreadPoolExecutor(max_workers=5) as executor:
         futureToIndex = {
-            executor.submit( # “Run analyzeQuestion(vectorStore, item["topic"], item["question"]) in another thread.”
+            executor.submit(
                 analyzeQuestion,
                 vectorStore,
                 item["topic"],
@@ -91,13 +87,13 @@ def analyzeContract(vectorStore: FAISS | None, fullText: str = "") -> AnalysisRe
             for i, item in enumerate(COMPLIANCE_QUESTIONS)
         }
 
-        for future in as_completed(futureToIndex): # as_completed(...) is a way to loop through futures in the order they finish.
-            index = futureToIndex[future] # futureToIndex tells you where its result belongs
+        for future in as_completed(futureToIndex): 
+            index = futureToIndex[future]
             try:
                 results[index] = future.result()
             except Exception as e:
                 print(f"ERROR for {COMPLIANCE_QUESTIONS[index]['topic']}: {str(e)}") 
-                # Then in analyzeContract() catch individual future failures so one bad call doesn't crash all 5:
+  
 
                 results[index] = ComplianceResult(
                     complianceQuestion=COMPLIANCE_QUESTIONS[index]["topic"],
@@ -108,17 +104,3 @@ def analyzeContract(vectorStore: FAISS | None, fullText: str = "") -> AnalysisRe
                 )
 
     return AnalysisResponse(results=results)
-
-
-# as_completed(...) gives futures one by one in the order they finish, not the order they were started.
-# So if question 3 finishes before question 1, you get question 3’s future first.
-
-
-# In a nutshell:
-
-# Instead of analyzing question 1, waiting, then question 2, waiting, etc. — it **fires all 5 GPT-4o calls at the same time** and collects results as they finish.
-
-# - `executor.submit()` — "start this task in a background thread, don't wait for it"
-# - `futureToIndex` — keeps track of which thread belongs to which question (so results stay in order)
-# - `as_completed()` — "give me results as they finish, regardless of order"
-# - `results[index]` — puts each result back in the correct position (question 1 always first, etc.)

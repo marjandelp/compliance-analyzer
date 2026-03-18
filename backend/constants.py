@@ -1,5 +1,5 @@
 # LLM
-LLM_MODEL = "gpt-4o"
+CHAT_MODEL = "gpt-4o"
 EMBEDDING_MODEL = "text-embedding-3-small"
 TEMPERATURE_ANALYSIS = 0
 TEMPERATURE_CHAT = 0.3

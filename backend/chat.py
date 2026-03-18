@@ -5,7 +5,7 @@ from schemas import ChatMessage
 from embeddings import retrieveChunks
 from langchain_community.vectorstores import FAISS
 from constants import (
-    LLM_MODEL,
+    CHAT_MODEL,
     TEMPERATURE_CHAT,
     CHAT_RETRIEVAL_K,
     MAX_HISTORY,
@@ -30,7 +30,7 @@ def sanitizeInput(text: str) -> str:
 
 def needsRetrieval(userMessage: str) -> bool:
     response = client.chat.completions.create(
-        model=LLM_MODEL,
+        model=CHAT_MODEL,
         messages=[
             {
                 "role": "system",
@@ -96,12 +96,3 @@ User question: {userMessage}"""
     )
 
     return response.choices[0].message.content
-
-
-
-# Key things to explain in interview:
-
-# Dynamic RAG routing — one extra GPT-4o call but prevents irrelevant chunks for general questions
-# Prompt injection defense — both input sanitization and system prompt reinforcement
-# Stateless backend — full text and history passed in each request, no server-side session complexity
-# History trimming — prevents context window overflow on long conversations
