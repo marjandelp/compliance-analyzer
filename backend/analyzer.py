@@ -1,0 +1,124 @@
+import os
+from dotenv import load_dotenv
+from openai import OpenAI
+from embeddings import retrieveChunks
+from schemas import ComplianceResult, AnalysisResponse, ComplianceState
+from langchain_community.vectorstores import FAISS
+from concurrent.futures import ThreadPoolExecutor, as_completed
+from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
+import openai
+from constants import SYSTEM_PROMPT, COMPLIANCE_QUESTIONS, RETRIEVAL_K, ANALYSIS_MODEL
+
+
+load_dotenv()
+
+client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
+
+
+@retry(
+    retry=retry_if_exception_type((openai.APITimeoutError, openai.RateLimitError)),
+    wait=wait_exponential(multiplier=1, min=2, max=10),
+    stop=stop_after_attempt(3)
+)
+def analyzeQuestion(
+    vectorStore: FAISS | None,
+    topic: str,
+    question: str,
+    retrievalQueries: list[str],
+    fullText: str = ""
+) -> ComplianceResult:
+    
+    if vectorStore is None:
+        context = fullText
+    else:
+        # multi-query retrieval: run each query and deduplicate
+        seen = set()
+        chunks = []
+        for query in retrievalQueries:
+            results = retrieveChunks(vectorStore, query=query, k=RETRIEVAL_K)
+            for c in results:
+                if c not in seen:
+                    seen.add(c)
+                    chunks.append(c)
+
+        if not chunks:
+            return ComplianceResult(
+                complianceQuestion=topic,
+                complianceState=ComplianceState.nonCompliant,
+                confidence=0,
+                relevantQuotes=[],
+                rationale="No relevant information found in the contract for this compliance requirement."
+            )
+
+        context = "\n\n---\n\n".join(chunks)
+
+    userPrompt = f"""Contract excerpts:
+{context}
+
+Compliance question:
+{question}"""
+    
+    print(f"=== FULL CHUNK 0 FOR {topic} ===")
+    print(chunks[0])
+    print(f"=== END FULL CHUNK 0 ===")
+    
+    response = client.beta.chat.completions.parse(
+        model=ANALYSIS_MODEL,
+        messages=[
+            {"role": "system", "content": SYSTEM_PROMPT},
+            {"role": "user", "content": userPrompt}
+        ],
+        # temperature=0,
+        response_format=ComplianceResult
+    )
+
+    return response.choices[0].message.parsed
+
+
+def analyzeContract(vectorStore: FAISS | None, fullText: str = "") -> AnalysisResponse:
+    results = [None] * len(COMPLIANCE_QUESTIONS)
+
+    with ThreadPoolExecutor(max_workers=5) as executor:
+        futureToIndex = {
+            executor.submit( # “Run analyzeQuestion(vectorStore, item["topic"], item["question"]) in another thread.”
+                analyzeQuestion,
+                vectorStore,
+                item["topic"],
+                item["question"],
+                item["retrievalQueries"],
+                fullText
+            ): i
+            for i, item in enumerate(COMPLIANCE_QUESTIONS)
+        }
+
+        for future in as_completed(futureToIndex): # as_completed(...) is a way to loop through futures in the order they finish.
+            index = futureToIndex[future] # futureToIndex tells you where its result belongs
+            try:
+                results[index] = future.result()
+            except Exception as e:
+                print(f"ERROR for {COMPLIANCE_QUESTIONS[index]['topic']}: {str(e)}") 
+                # Then in analyzeContract() catch individual future failures so one bad call doesn't crash all 5:
+
+                results[index] = ComplianceResult(
+                    complianceQuestion=COMPLIANCE_QUESTIONS[index]["topic"],
+                    complianceState=ComplianceState.nonCompliant,
+                    confidence=0,
+                    relevantQuotes=[],
+                    rationale=f"Analysis failed for this requirement: {str(e)}"
+                )
+
+    return AnalysisResponse(results=results)
+
+
+# as_completed(...) gives futures one by one in the order they finish, not the order they were started.
+# So if question 3 finishes before question 1, you get question 3’s future first.
+
+
+# In a nutshell:
+
+# Instead of analyzing question 1, waiting, then question 2, waiting, etc. — it **fires all 5 GPT-4o calls at the same time** and collects results as they finish.
+
+# - `executor.submit()` — "start this task in a background thread, don't wait for it"
+# - `futureToIndex` — keeps track of which thread belongs to which question (so results stay in order)
+# - `as_completed()` — "give me results as they finish, regardless of order"
+# - `results[index]` — puts each result back in the correct position (question 1 always first, etc.)

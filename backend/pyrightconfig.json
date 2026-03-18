@@ -1,0 +1,6 @@
+{
+    "venvPath": ".",
+    "venv": "contractAnalyzer",
+    "pythonVersion": "3.11",
+    "include": ["."]
+}
