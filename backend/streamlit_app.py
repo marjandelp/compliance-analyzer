@@ -33,9 +33,11 @@ if uploadedFile is not None:
 if "results" in st.session_state:
     st.subheader("Compliance Results")
 
+    import pandas as pd
+
     tableData = []
     for result in st.session_state["results"]:
-        quotes = " | ".join(result["relevantQuotes"])
+        quotes = "\n\n".join(result["relevantQuotes"]) if result["relevantQuotes"] else "None found"
         tableData.append({
             "Compliance Question": result["complianceQuestion"],
             "Compliance State": result["complianceState"],
@@ -44,16 +46,37 @@ if "results" in st.session_state:
             "Rationale": result["rationale"]
         })
 
-    import pandas as pd
     df = pd.DataFrame(tableData)
-    st.dataframe(
-        df,
-        use_container_width=True,
-        hide_index=True,
-        column_config={
-            "Relevant Quotes": st.column_config.TextColumn(width="large"),
-            "Rationale": st.column_config.TextColumn(width="large"),
-        }
+
+    col_widths = {
+        "Compliance Question": "14%",
+        "Compliance State": "10%",
+        "Confidence": "8%",
+        "Relevant Quotes": "38%",
+        "Rationale": "30%"
+    }
+
+    html = "<table style='width:100%; table-layout:fixed; border-collapse:collapse; font-size:13px;'>"
+    
+    # Header
+    html += "<tr>"
+    for col in df.columns:
+        html += f"<th style='text-align:left; padding:8px; background-color:#0F2B46; color:white; width:{col_widths[col]};'>{col}</th>"
+    html += "</tr>"
+    
+    # Rows
+    for _, row in df.iterrows():
+        html += "<tr style='border-bottom:1px solid #E2E8F0;'>"
+        for col in df.columns:
+            val = str(row[col]).replace('\n', '<br>')
+            html += f"<td style='padding:8px; vertical-align:top; white-space:pre-wrap; word-wrap:break-word;'>{val}</td>"
+        html += "</tr>"
+    
+    html += "</table>"
+
+    st.markdown(
+        f"<div style='overflow-x:auto; overflow-y:auto; max-height:500px;'>{html}</div>",
+        unsafe_allow_html=True
     )
 
 if "sessionId" in st.session_state:
@@ -82,7 +105,12 @@ if "sessionId" in st.session_state:
                         "history": st.session_state["chatHistory"]
                     }
                 )
-                reply = response.json()["reply"]
+                data = response.json()
+                if "reply" in data:
+                    reply = data["reply"]
+                else:
+                    st.error(f"Chat error: {data}")
+                    st.stop()
 
                 st.session_state["chatHistory"].append({
                     "role": "assistant",

@@ -111,11 +111,11 @@ def evalRetrieval(pdfPath: str, expectedRelevantCount: int = None):
 
 if __name__ == "__main__":
     evalRetrieval(
-        "/Users/marjan/Desktop/manulife-project/contract-analyzer/test-pipeline-pdf/Sample-Contract.pdf",
+        "/Users/marjan/Desktop/manulife-project/contract-analyzer/test-pipeline-pdf/Sample Contract.pdf",
         expectedRelevantCount=5
     )
 
     evalRetrieval(
-        "/Users/marjan/Desktop/manulife-project/contract-analyzer/test-pipeline-pdf/test.pdf",
+        "/Users/marjan/Desktop/manulife-project/contract-analyzer/test-pipeline-pdf/PCS Strategic Plan.pdf",
         expectedRelevantCount=0
     )

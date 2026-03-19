@@ -8,6 +8,10 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from tenacity import retry, stop_after_attempt, wait_exponential, retry_if_exception_type
 import openai
 from constants import SYSTEM_PROMPT, COMPLIANCE_QUESTIONS, RETRIEVAL_K, ANALYSIS_MODEL
+import logging
+import time
+
+logger = logging.getLogger(__name__)
 
 
 load_dotenv()
@@ -72,6 +76,8 @@ Compliance question:
 
 
 def analyzeContract(vectorStore: FAISS | None, fullText: str = "") -> AnalysisResponse:
+    startTime = time.perf_counter()
+    logger.info("analyzeContract started")
     results = [None] * len(COMPLIANCE_QUESTIONS)
 
     with ThreadPoolExecutor(max_workers=5) as executor:
@@ -89,9 +95,13 @@ def analyzeContract(vectorStore: FAISS | None, fullText: str = "") -> AnalysisRe
 
         for future in as_completed(futureToIndex): 
             index = futureToIndex[future]
+            topic = COMPLIANCE_QUESTIONS[index]["topic"]
+            index = futureToIndex[future]
             try:
                 results[index] = future.result()
+                logger.info(f"[{topic}] Completed")
             except Exception as e:
+                logger.exception(f"[{topic}] Failed: {e}")
                 print(f"ERROR for {COMPLIANCE_QUESTIONS[index]['topic']}: {str(e)}") 
   
 
@@ -102,5 +112,6 @@ def analyzeContract(vectorStore: FAISS | None, fullText: str = "") -> AnalysisRe
                     relevantQuotes=[],
                     rationale=f"Analysis failed for this requirement: {str(e)}"
                 )
-
+                
+    logger.info(f"analyzeContract finished in {time.perf_counter() - startTime:.2f}s")
     return AnalysisResponse(results=results)

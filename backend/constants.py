@@ -8,7 +8,7 @@ TEMPERATURE_CHAT = 0.3
 CHUNK_SIZE = 1024
 CHUNK_OVERLAP = 128
 RETRIEVAL_K = 10
-CHAT_RETRIEVAL_K = 4
+CHAT_RETRIEVAL_K = 5
 SHORT_DOC_THRESHOLD = 10000
 
 # Chat
@@ -110,7 +110,7 @@ Rules:
 - complianceState must be exactly one of: "Fully Compliant", "Partially Compliant", "Non-Compliant"
 - confidence is an integer between 0 and 100
 - If a requirement is not explicitly stated in the provided excerpts, you must treat it as missing and not satisfied.
-- relevantQuotes must be direct quotes from the provided excerpts, not paraphrases
+- relevantQuotes must be direct quotes from the provided excerpts, not paraphrases. Prefix each quote with its section or exhibit reference if identifiable (e.g., "Section 6.6: Vendor will maintain...")
 - If the excerpts do not address the question at all, return "Non-Compliant" with confidence 0-20%
 - If the excerpts partially address the question, return "Partially Compliant" with confidence 40-70%
 - Be strict: only mark "Fully Compliant" if ALL requirements are explicitly covered
@@ -123,7 +123,6 @@ Rules:
 INJECTION_PATTERNS = [
     "ignore previous instructions",
     "ignore all instructions",
-    "you are now",
     "new instructions",
     "system prompt",
     "forget everything",

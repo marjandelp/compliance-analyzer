@@ -37,5 +37,5 @@ def evalFaithfulness(pdfPath: str):
 if __name__ == "__main__":
 
     evalFaithfulness(
-        "/Users/marjan/Desktop/manulife-project/contract-analyzer/test-pipeline-pdf/Resume-Marjan-Delpisheh.pdf"
+        "/Users/marjan/Desktop/manulife-project/contract-analyzer/test-pipeline-pdf/Sample Contract.pdf"
     )
