@@ -125,7 +125,6 @@ python eval/evalFaithfulness.py
 - Scanned/image-only PDFs → handled via LlamaParse multimodal OCR
 - Short documents → bypass RAG, use full text directly
 - API timeout/rate limit → retry with exponential backoff (3 attempts)
-- Individual question failure → graceful degradation, returns Non-Compliant with error rationale
 - Invalid LLM output → Pydantic validators clamp confidence and normalize compliance state
 - Prompt injection in chat → input sanitization + system prompt reinforcement
 
@@ -143,6 +142,6 @@ python eval/evalFaithfulness.py
 |---|---|---|
 | LlamaParse | 1 | ~$0.003/page |
 | o3-mini (analysis) | 5 | ~$0.05-0.08 |
-| GPT-4o (chat) | 1-2 per turn | ~$0.004/turn |
+| GPT-4o (chat) | 1-2 | ~$0.004 |
 | text-embedding-3-small | ~12 | ~$0.001 |
 | **Total per upload** | | **~$0.06-0.09** |
