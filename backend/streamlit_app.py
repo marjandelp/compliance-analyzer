@@ -1,4 +1,5 @@
 import streamlit as st
+st.set_page_config(layout="wide")
 import requests
 
 API_URL = "http://localhost:8000"
