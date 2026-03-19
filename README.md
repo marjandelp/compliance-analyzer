@@ -107,7 +107,7 @@ python eval/evalFaithfulness.py
 
 **Multi-query retrieval.** Each compliance question uses 2-4 focused sub-queries instead of one long keyword blob. Single queries dilute embedding similarity — splitting by sub-requirement retrieves from different contract sections and deduplicates results.
 
-**Parallel execution.** All 5 compliance questions analyzed concurrently via `ThreadPoolExecutor`. Reduces total analysis time from ~30s sequential to ~6-8s.
+**Parallel execution.** All 5 compliance questions analyzed concurrently via `ThreadPoolExecutor`. Reduces total analysis time.
 
 **Separated retrieval queries from analysis questions.** Keyword-rich queries optimized for FAISS embedding search, detailed questions sent to the LLM. Different prompts for different jobs.
 
