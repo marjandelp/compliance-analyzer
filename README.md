@@ -29,7 +29,7 @@ contract-analyzer/
 │   ├── parser.py            # PDF parsing (LlamaParse + PyMuPDF fallback)
 │   ├── embeddings.py        # Chunking + FAISS vector store
 │   ├── analyzer.py          # Compliance analysis (parallel o3-mini calls)
-│   ├── chat.py              # Chat with dynamic RAG routing
+│   ├── chat.py              # Chat with RAG 
 │   ├── schemas.py           # Pydantic output schemas
 │   ├── constants.py         # Configuration and compliance questions
 │   ├── streamlit_app.py     # Streamlit frontend
@@ -49,12 +49,12 @@ contract-analyzer/
 ### Prerequisites
 - Python 3.11+
 - OpenAI API key
-- LlamaCloud API key
+- Llamaparse API key
 
 ### Local Setup
 
 ```bash
-git clone <repo-url>
+git clone <https://github.com/marjandelp/compliance-analyzer.git>
 cd contract-analyzer
 
 python -m venv contractAnalyzer
@@ -113,7 +113,7 @@ python eval/evalFaithfulness.py
 
 **LlamaParse with PyMuPDF fallback.** LlamaParse handles complex contract layouts (tables, multi-column, scanned pages) better than open-source parsers. PyMuPDF fallback ensures parsing still works if LlamaParse is unavailable.
 
-**Dynamic RAG routing in chat.**  Prevents irrelevant chunks for broad questions.
+** RAG in chat.**  Prevents irrelevant chunks for broad questions.
 
 **Structured outputs with Pydantic.** Uses `client.beta.chat.completions.parse()` with a Pydantic schema to guarantee valid, typed JSON without manual parsing.
 
@@ -122,7 +122,6 @@ python eval/evalFaithfulness.py
 - Empty or zero-byte PDFs → rejected before parsing
 - Non-PDF files disguised as PDF → rejected via magic byte check
 - Password-protected PDFs → rejected with clear error
-- File size limit → 20MB maximum
 - Scanned/image-only PDFs → handled via LlamaParse multimodal OCR
 - Short documents → bypass RAG, use full text directly
 - API timeout/rate limit → retry with exponential backoff (3 attempts)
@@ -137,18 +136,6 @@ python eval/evalFaithfulness.py
 **Retrieval eval (LLM-as-judge)** — verifies retrieved chunks are semantically relevant to each compliance topic. Tested on a security contract (expect 5/5) and an unrelated document (expect 0/5).
 
 **Faithfulness eval** — verifies quotes in compliance results actually appear in the source document, catching hallucinated evidence.
-
-## Known Limitations
-
-- Session store is in-memory — restarting the server loses sessions
-- LlamaParse has rate limits on free tier
-- Analysis quality depends on contract structure and language
-
-## Production Improvements
-
-- Hybrid search (semantic + BM25)
-- Persistent vector store (Pinecone or Weaviate)
-- Observability tracing (Langfuse v3 OTel-based SDK)
 
 ## Cost Estimate (per analysis)
 
